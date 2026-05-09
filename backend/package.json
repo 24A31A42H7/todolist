@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "nodemon server.js",
-    "test": "npx jest"
+    "test":"node ./node_modules/jest/bin/jest.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
