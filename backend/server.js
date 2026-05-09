@@ -1,15 +1,48 @@
 const express = require("express");
 const cors = require("cors");
-const connectDB = require("./config/db");
+const path = require("path");
+const mongoose = require("mongoose");
+
+require("dotenv").config();
 
 const app = express();
-connectDB();
 
 app.use(cors());
 app.use(express.json());
 
+// MongoDB Connection
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+
+    console.log("MongoDB Connected");
+  } catch (error) {
+    console.error(error);
+    process.exit(1);
+  }
+};
+
+// API Routes
 app.use("/api/tasks", require("./routes/taskRoutes"));
 
-app.listen(5000, () => console.log("Server running on port 5000"));
+// Serve React frontend build
+app.use(express.static(path.join(__dirname, "../frontend/build")));
 
-module.exports = app; // for testing
+app.get("*", (req, res) => {
+  res.sendFile(
+    path.join(__dirname, "../frontend/build/index.html")
+  );
+});
+
+// Only start server if NOT testing
+if (process.env.NODE_ENV !== "test") {
+  connectDB();
+
+  const PORT = process.env.PORT || 5000;
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
