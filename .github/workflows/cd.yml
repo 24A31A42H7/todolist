@@ -1,0 +1,71 @@
+name: CD Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # 2. Setup Node (optional but good practice)
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      # 3. Install dependencies (optional safety)
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm install
+
+      # 4. Build Docker image
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/mern-app:latest .
+
+      # 5. Login to DockerHub
+      - name: Login to DockerHub
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      # 6. Push Docker image
+      - name: Push Docker Image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/mern-app:latest
+
+      # 7. Install OpenShift CLI (oc)
+      - name: Install oc CLI
+        run: |
+          curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/oc/latest/linux/oc.tar.gz
+          tar -xvf oc.tar.gz
+          sudo mv oc /usr/local/bin/
+
+      # 8. Login to OpenShift
+      - name: Login to OpenShift
+        run: |
+          oc login ${{ secrets.OPENSHIFT_SERVER }} --token=${{ secrets.OPENSHIFT_TOKEN }} --insecure-skip-tls-verify=true
+
+      # 9. Select project
+      - name: Select Project
+        run: |
+          oc project ${{ secrets.PROJECT_NAME }}
+
+      # 10. Deploy using Kubernetes YAML
+      - name: Deploy App
+        run: |
+          oc apply -f k8s/
+
+      # 11. Restart deployment to pull latest image
+      - name: Restart Deployment
+        run: |
+          oc rollout restart deployment/mern-app
