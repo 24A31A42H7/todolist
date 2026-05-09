@@ -2,34 +2,44 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout code
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Backend install + test
+      # Setup Node
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      # Backend install
       - name: Install Backend Dependencies
         run: |
           cd backend
           npm install
 
+      # Backend tests
       - name: Run Backend Tests
         run: |
           cd backend
           npm test
 
-      # Frontend install + test
+      # Frontend install
       - name: Install Frontend Dependencies
         run: |
           cd frontend
           npm install
 
+      # Frontend tests
       - name: Run Frontend Tests
         run: |
           cd frontend
-          npm test -- --watchAll=false
+          CI=true npm test -- --watchAll=false
